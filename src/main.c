@@ -1,7 +1,15 @@
-#include <stdio.h>
+#include "../lib/keyprocessing.h"
 
-int main(int argc, char const *argv[])
+
+
+int main()
 {
-    printf("\nHello...\n");
+    
+    begin();
+    while (1)
+    {
+        editorProcessKeypress();
+    }
+    quit();
     return 0;
 }
