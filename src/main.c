@@ -6,6 +6,7 @@ int main()
 {
     
     begin();
+    editorOpen();
     while (1)
     {
         editorWindowRefresh();
