@@ -40,6 +40,10 @@ extern int getRow(){
     return E.screenrows;
 }
 
+extern int getCol(){
+    return E.screencols;
+}
+
 extern void die(const char * message){
     write(STDIN_FILENO,"\x1b[2J",4);
     write(STDIN_FILENO,"\x1b[H",3);
