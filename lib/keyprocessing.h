@@ -8,7 +8,7 @@
 #include "../include/defenitions.h"
 
 extern void editorWindowRefresh();
-
+char * fname = NULL;
 typedef struct erow
 {
     int size;
@@ -20,6 +20,7 @@ struct editorData
     int numrows;
     erow * row;
     int rowOffset;
+    int colOffset;
 };
 
 struct inputConfig
@@ -64,7 +65,9 @@ extern void begin()
     eD.numrows = 0;
     eD.row = NULL;
     eD.rowOffset = 0;
+    eD.colOffset = 0;
     initTerminalWindow();
+    E.screenrows -= 1;
     enableRawMode();
     atexit(disableRawMode);
 }
@@ -76,6 +79,8 @@ extern void quit()
 
 void editorMoveCursor(int c)
 {
+    erow * row = (iC.cy >= eD.numrows)?NULL:&eD.row[iC.cy];
+
     if (iC.firstInput == 1)
     {
         iC.firstInput = 0;
@@ -84,18 +89,23 @@ void editorMoveCursor(int c)
     switch (c)
     {
     case ARROW_LEFT:
-        if (iC.cx > 0)
+        if (iC.cx != 0)
         {
             iC.cx--;
+        }else if (iC.cy > 0){
+            iC.cy--;
+            iC.cx = eD.row[iC.cy].size;
         }
 
         break;
 
     case ARROW_RIGHT:
-
-        if (iC.cx < getCol() - 1)
+        if (row && iC.cx < row->size)
         {
             iC.cx++;
+        }else if (row && iC.cx == row->size){
+            iC.cy++;
+            iC.cx = 0;
         }
         break;
 
@@ -112,6 +122,12 @@ void editorMoveCursor(int c)
             iC.cy++;
         }
         break;
+    }
+
+    row = (iC.cy >= eD.numrows) ? NULL : &eD.row[iC.cy];
+    int rowlen = row ? row->size : 0;
+    if (iC.cx > rowlen) {
+        iC.cx = rowlen;
     }
 }
 
@@ -144,20 +160,19 @@ void editorDrawRows(struct abuf *ab)
                 abAppend(ab, "~", 1);
             }
         }else{
-            int len = eD.row[filerow].size;
+            int len = eD.row[filerow].size - eD.colOffset;
+            if (len<0) len = 0;
             if (len > getCol())
             {
                 len = getCol();
             }
-            abAppend(ab,eD.row[filerow].chars,len);
+            abAppend(ab,&eD.row[filerow].chars[eD.colOffset],len);
         }
         
 
         abAppend(ab, "\x1b[K", 3);
-        if (y < getRow() - 1)
-        {
-            abAppend(ab, "\r\n", 2);
-        }
+        abAppend(ab, "\r\n", 2);
+        
     }
 }
 
@@ -291,6 +306,26 @@ void editorScroll() {
   if (iC.cy >= eD.rowOffset + getRow()) {
     eD.rowOffset = iC.cy - getRow() + 1;
   }
+  if (iC.cx < eD.colOffset) {
+    eD.colOffset = iC.cx;
+  }
+  if (iC.cx >= eD.colOffset + getCol()) {
+    eD.colOffset = iC.cx - getCol() + 1;
+  }
+}
+
+void editorDrawStatusBar(struct abuf *ab) {
+  abAppend(ab, "\x1b[7m", 4);
+  char status[80];
+  int len = snprintf(status, sizeof(status), "%.20s - %d lines      Ctrl+X to exit",
+  fname ? fname : "[No Name]", eD.numrows);
+  if (len > E.screencols) len = E.screencols;
+  abAppend(ab, status, len);
+  while (len < E.screencols) {
+    abAppend(ab, " ", 1);
+    len++;
+  }
+  abAppend(ab, "\x1b[m", 3);
 }
 
 extern void editorWindowRefresh()
@@ -302,6 +337,7 @@ extern void editorWindowRefresh()
     abAppend(ab, "\x1b[H", 3);
 
     editorDrawRows(ab);
+    editorDrawStatusBar(ab);
     abAppend(ab, "\x1b[H", 3);
 
     char cursorCmd[32];
@@ -327,6 +363,7 @@ extern void editorOpen(const char * filename)
 {
     FILE * fp = fopen(filename,"r");
     if(!fp) die("fopen");
+    fname = strdup(filename);
     iC.firstInput = 0;
     char * line = NULL;
     size_t linecap = 0;
