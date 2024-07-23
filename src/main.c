@@ -2,11 +2,16 @@
 
 
 
-int main()
+int main(int argc, char const *argv[])
 {
     
     begin();
-    editorOpen();
+
+    if (argc >= 2)
+    {
+        editorOpen(argv[1]);
+    }
+
     while (1)
     {
         editorWindowRefresh();

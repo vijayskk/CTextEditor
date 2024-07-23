@@ -18,7 +18,7 @@ typedef struct erow
 struct editorData
 {
     int numrows;
-    erow row;
+    erow * row;
 };
 
 struct inputConfig
@@ -61,6 +61,7 @@ extern void begin()
     iC.cy = 0;
     iC.firstInput = 1;
     eD.numrows = 0;
+    eD.row = NULL;
 
     initTerminalWindow();
     enableRawMode();
@@ -142,12 +143,12 @@ void editorDrawRows(struct abuf *ab)
                 abAppend(ab, "~", 1);
             }
         }else{
-            int len = eD.row.size;
+            int len = eD.row[y].size;
             if (len > getCol())
             {
                 len = getCol();
             }
-            abAppend(ab,eD.row.chars,len);
+            abAppend(ab,eD.row[y].chars,len);
         }
         
 
@@ -299,13 +300,34 @@ extern void editorWindowRefresh()
     free(ab);
 }
 
-extern void editorOpen()
+void editorAppendRow(char * s,size_t len){
+    eD.row = realloc(eD.row,sizeof(erow) * (eD.numrows + 1));
+
+    int at = eD.numrows;
+    eD.row[at].size = len;
+    eD.row[at].chars = malloc(len + 1);
+    memcpy(eD.row[at].chars,s,len);
+    eD.row[at].chars[len] = '\0';
+    eD.numrows++;
+}
+
+extern void editorOpen(const char * filename)
 {
-    char *line = "Hello World...";
-    ssize_t linelen = 14;
-    eD.row.size = linelen;
-    eD.row.chars = malloc(linelen + 1);
-    memcpy(eD.row.chars, line, linelen);
-    eD.row.chars[linelen] = '\0';
-    eD.numrows = 1;
+    FILE * fp = fopen(filename,"r");
+    if(!fp) die("fopen");
+    iC.firstInput = 0;
+    char * line = NULL;
+    size_t linecap = 0;
+    ssize_t linelen;
+    while (( linelen = getline(&line,&linecap,fp)) != -1)
+        {
+            while (linelen > 0 && ( line[linelen - 1] == '\n' || line[linelen - 1] == '\r' ))
+            {
+                linelen--;
+            }
+            editorAppendRow(line,linelen);
+        }
+
+    free(line);
+    fclose(fp);
 }

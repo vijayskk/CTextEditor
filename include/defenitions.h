@@ -1,3 +1,7 @@
+#define _DEFAULT_SOURCE
+#define _BSD_SOURCE
+#define _GNU_SOURCE
+
 #define ENTER_KEY_ASCII 10
 #define DELETE_KEY_ASCII 127
 #define TYPICAL_SIZE 100
