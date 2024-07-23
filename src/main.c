@@ -8,6 +8,7 @@ int main()
     begin();
     while (1)
     {
+        editorWindowRefresh();
         editorProcessKeypress();
     }
     quit();

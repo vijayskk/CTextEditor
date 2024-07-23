@@ -6,13 +6,24 @@
 #include "../include/terminalfunctions.h"
 #include "../include/defenitions.h"
 
+
+
+
 extern void begin(){
+    initTerminalWindow();
     enableRawMode();
     atexit(disableRawMode);
 }
 
 extern void quit(){
     disableRawMode();
+}
+
+void editorDrawRows(){
+    int y;
+    for (y = 0; y< getRow();y++){
+        write(STDIN_FILENO,"~\r\n",3);
+    }
 }
 
 char editorReadkey()
@@ -34,7 +45,17 @@ extern void editorProcessKeypress()
     switch (c)
     {
     case CTRL_KEY('x'):
+        write(STDIN_FILENO,"\x1b[2J",4);
+        write(STDIN_FILENO,"\x1b[H",3);
         exit(0);
         break;
     }
+}
+
+extern void editorWindowRefresh(){
+    write(STDIN_FILENO,"\x1b[2J",4);
+    write(STDIN_FILENO,"\x1b[H",3);
+
+    editorDrawRows();
+    write(STDIN_FILENO,"\x1b[H",3);
 }
