@@ -19,6 +19,7 @@ struct editorData
 {
     int numrows;
     erow * row;
+    int rowOffset;
 };
 
 struct inputConfig
@@ -62,7 +63,7 @@ extern void begin()
     iC.firstInput = 1;
     eD.numrows = 0;
     eD.row = NULL;
-
+    eD.rowOffset = 0;
     initTerminalWindow();
     enableRawMode();
     atexit(disableRawMode);
@@ -106,7 +107,7 @@ void editorMoveCursor(int c)
         break;
 
     case ARROW_DOWN:
-        if (iC.cy < getRow() - 1)
+        if (iC.cy < eD.numrows)
         {
             iC.cy++;
         }
@@ -119,8 +120,8 @@ void editorDrawRows(struct abuf *ab)
     int y;
     for (y = 0; y < getRow(); y++)
     {
-
-        if (y >= eD.numrows)
+        int filerow = y + eD.rowOffset;
+        if (filerow >= eD.numrows)
         {
             if (y == 0 && iC.firstInput == 1)
             {
@@ -143,12 +144,12 @@ void editorDrawRows(struct abuf *ab)
                 abAppend(ab, "~", 1);
             }
         }else{
-            int len = eD.row[y].size;
+            int len = eD.row[filerow].size;
             if (len > getCol())
             {
                 len = getCol();
             }
-            abAppend(ab,eD.row[y].chars,len);
+            abAppend(ab,eD.row[filerow].chars,len);
         }
         
 
@@ -282,8 +283,19 @@ extern void editorProcessKeypress()
     editorWindowRefresh();
 }
 
+
+void editorScroll() {
+  if (iC.cy < eD.rowOffset) {
+    eD.rowOffset = iC.cy;
+  }
+  if (iC.cy >= eD.rowOffset + getRow()) {
+    eD.rowOffset = iC.cy - getRow() + 1;
+  }
+}
+
 extern void editorWindowRefresh()
 {
+    editorScroll();
     struct abuf *ab = (struct abuf *)malloc(sizeof(struct abuf));
 
     abAppend(ab, "\x1b[?25l", 6);
@@ -293,7 +305,7 @@ extern void editorWindowRefresh()
     abAppend(ab, "\x1b[H", 3);
 
     char cursorCmd[32];
-    snprintf(cursorCmd, sizeof(cursorCmd), "\x1b[%d;%dH", iC.cy + 1, iC.cx + 1);
+    snprintf(cursorCmd, sizeof(cursorCmd), "\x1b[%d;%dH", (iC.cy - eD.rowOffset ) + 1, iC.cx + 1);
     abAppend(ab, cursorCmd, strlen(cursorCmd));
     abAppend(ab, "\x1b[?25h", 6);
     write(STDOUT_FILENO, ab->b, ab->len);
